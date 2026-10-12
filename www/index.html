@@ -100,6 +100,30 @@ $("mbtn").onclick=async()=>{
   try{await setDoc(sref,d);setM(d);msg(on?"Mantenimiento activado: ya lo ven los visitantes.":"Mantenimiento desactivado: el sitio vuelve a funcionar.")}
   catch(e){msg("No se pudo cambiar el modo ("+e.code+"). ¿Publicaste las reglas nuevas de Firestore?",1)}
 };
+// Carga de logos del panel: de a pocos a la vez (para que Google no limite las peticiones), sin enviar el "referrer",
+// con reintento y respaldo por un servicio de imágenes. Recuerda cuáles necesitan el respaldo.
+const IMGQ=[];let imgBusy=0;
+const IMP=(()=>{try{return JSON.parse(localStorage.getItem("op_imgp")||"{}")}catch{return{}}})();
+function imgRun(){while(imgBusy<3&&IMGQ.length){const job=IMGQ.shift();imgBusy++;job(()=>{imgBusy--;setTimeout(imgRun,120)})}}
+function loadImg(im,url,fail){
+  im.referrerPolicy="no-referrer";im.decoding="async";im._u=url;
+  if(!/^https?:/i.test(url)){im.onerror=fail;im.src=url;return}
+  const big=/googleusercontent\.com|ggpht\.com/.test(url)?url.replace(/=s\d+(?=-|$)/,"=s256"):url;
+  const px="https://wsrv.nl/?url="+encodeURIComponent(url)+"&w=256&h=256&fit=contain&output=png";
+  const seq=/wsrv\.nl/.test(url)?[[url,0],[url,2000]]:IMP[url]?[[px,0],[px,2000]]:[[big,0],[big,1500],[px,0],[px,2500]];let i=0;
+  const next=()=>{
+    if(i>=seq.length)return fail&&fail();
+    const [u,d]=seq[i++];
+    setTimeout(()=>{IMGQ.push(done=>{
+      if(im._u!==url||!im.isConnected){done();return}            // el campo cambió o la fila ya no existe
+      const fin=ok=>{im.onload=im.onerror=null;done();
+        if(ok){if(u===px&&!IMP[url]){IMP[url]="p";try{localStorage.setItem("op_imgp",JSON.stringify(IMP))}catch{}}}else next()};
+      im.onload=()=>fin(true);im.onerror=()=>fin(false);im.src=u;
+    });imgRun()},d);
+  };
+  next();
+}
+window.adminLoadImg=loadImg;   // lo usa también el encabezado de cada canal
 function fld(label,key,i,ph,list){
   const l=document.createElement("label"),x=document.createElement("input");l.append(label);x.value=ch[i][key]||"";x.placeholder=ph||"";if(list)x.setAttribute("list",list);
   x.onfocus=snap;x.oninput=()=>{ch[i][key]=x.value;mark()};l.append(x);return l;
@@ -154,7 +178,8 @@ function render(){
     m.append(fld("Guía: URL del epg.xml (XMLTV), o del stream .ts para leer su guía integrada","e",i,"https://.../epg.xml"),fld("ID de la guía (tvg-id, opcional)","id",i,""),lv);
     r.append(n,fld("Nombre","n",i,"Mi canal"),fld("Categoría","c",i,"Noticias","cats"),fld("URL del canal (.m3u8 o http://ip:puerto/play/id)","u",i,"https://..."),a,document.createElement("span"),m);
     const mk=cls=>{const d=document.createElement("div");d.className="more "+cls;return d},m2=mk("l"),m3=mk("f"),m4=mk("t"),m5=mk("k"),th=document.createElement("img"),lg=fld("Logo (URL de imagen o ruta como logos/canal.png)","img",i,"https://.../logo.png");
-    th.className="thumb";th.alt="";const sh=()=>{th.style.visibility=c.img?"visible":"hidden";if(c.img)th.src=c.img};sh();th.onerror=()=>{th.style.visibility="hidden"};lg.querySelector("input").addEventListener("input",sh);
+    th.className="thumb";th.alt="";th.addEventListener("load",()=>{th.style.visibility="visible"});
+    let sT=0;const sh=()=>{clearTimeout(sT);th.style.visibility="hidden";if(c.img&&c.img.trim())sT=setTimeout(()=>loadImg(th,c.img.trim(),()=>{th.style.visibility="hidden"}),400)};sh();lg.querySelector("input").addEventListener("input",sh);
     const cw=document.createElement("label"),cr=document.createElement("div"),ci=document.createElement("input");
     cw.className="col";cw.append("Color del canal");cr.style.cssText="display:flex;gap:6px";ci.type="color";ci.value=c.color||"#163959";ci.style.opacity=c.color?1:.4;
     ci.onfocus=snap;ci.oninput=()=>{c.color=ci.value;ci.style.opacity=1;mark()};

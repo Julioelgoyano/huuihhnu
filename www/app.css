@@ -131,3 +131,9 @@ body:not(.t-canales) .stats{display:none}
 #login .tag{text-align:center;margin:-6px 0 8px;font-size:13px;color:var(--mut)}
 .pwrap{position:relative}.pwrap input{padding-right:78px}
 .eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.08);border:0;border-radius:10px;padding:6px 12px;font:500 12px Poppins,sans-serif;color:var(--cyan)}
+
+/* logos: aparecen con suavidad */
+.rl img{opacity:0;transition:opacity .4s}.rl img.ok{opacity:1}
+.thumb{transition:opacity .3s}
+@keyframes tin{from{opacity:0;transform:translate(-50%,12px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+#toast{animation:tin .25s ease}
