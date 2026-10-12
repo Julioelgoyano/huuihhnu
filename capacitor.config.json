@@ -1,0 +1,16 @@
+{
+  "appId": "com.oplustv.admin",
+  "appName": "O-PLUS Admin",
+  "webDir": "www",
+  "backgroundColor": "#060e17",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#060e17",
+      "overlaysWebView": false
+    }
+  }
+}
